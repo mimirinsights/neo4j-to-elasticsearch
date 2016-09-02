@@ -12,5 +12,6 @@
         "_labels": "getLabels()"
       }
     }
-  ]
+  ],
+  "relationship_mappings": []
 }

@@ -14,6 +14,7 @@
 
 package com.graphaware.module.es.executor;
 
+import com.google.gson.Gson;
 import com.graphaware.common.log.LoggerFactory;
 import com.graphaware.writer.thirdparty.WriteOperation;
 import io.searchbox.action.BulkableAction;
@@ -75,6 +76,12 @@ public class BulkOperationExecutor extends BaseOperationExecutor {
 
     private void executeBulk(Bulk.Builder bulkBuilder) {
         Bulk bulkOperation = bulkBuilder.build();
+        String op = bulkOperation.getData(new Gson());
+        if (op == null || op.equals("")) {
+            clearFailed();
+            return;
+        }
+
         try {
             JestResult execute = getClient().execute(bulkOperation);
             if (execute.isSucceeded()) {

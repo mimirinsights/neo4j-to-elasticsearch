@@ -700,11 +700,12 @@ public class ElasticSearchModuleJsonMappingTest extends ElasticSearchModuleInteg
         });
         TestUtil.waitFor(5000);
         try (Transaction tx = database.beginTx()) {
-            database.findNodes(Label.label("Node")).stream().limit(100).forEach(n -> {
+            database.findNodes(Label.label("Node")).stream().forEach(n -> {
                 Get get = new Get.Builder("nodes", n.getProperty("uuid").toString()).type("node").build();
                 JestResult result = esClient.execute(get);
                 assertTrue(result.isSucceeded());
             });
+            tx.success();
         }
 
     }

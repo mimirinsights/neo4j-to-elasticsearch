@@ -38,7 +38,7 @@ public class ElasticSearchConfiguration extends BaseTxDrivenModuleConfiguration<
         DEFAULT_MAPPING.configure(new HashMap<>());
     }
 
-    private static final int DEFAULT_QUEUE_CAPACITY = 10000;
+    private static final int DEFAULT_QUEUE_CAPACITY = 1000;
     private static final String DEFAULT_AUTH_USER = null;
     private static final String DEFAULT_AUTH_PASSWORD = null;
 

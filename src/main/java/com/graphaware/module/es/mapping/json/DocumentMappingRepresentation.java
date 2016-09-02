@@ -34,10 +34,10 @@ public class DocumentMappingRepresentation {
     private DocumentMappingDefaults defaults;
 
     @JsonProperty("node_mappings")
-    private List<GraphDocumentMapper> nodeMappers;
+    private List<GraphDocumentMapper> nodeMappers = new ArrayList<>();
 
     @JsonProperty("relationship_mappings")
-    private List<GraphDocumentMapper> relationshipMappers;
+    private List<GraphDocumentMapper> relationshipMappers = new ArrayList<>();
 
     public DocumentMappingDefaults getDefaults() {
         return defaults;
