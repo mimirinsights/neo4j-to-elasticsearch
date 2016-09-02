@@ -1,0 +1,16 @@
+{
+  "defaults": {
+    "key_property": "uuid",
+    "nodes_index": "nodes",
+    "include_remaining_properties": true
+  },
+  "node_mappings": [
+    {
+      "condition": "getProperty('materialize') == true",
+      "type": "node",
+      "properties": {
+        "_labels": "getLabels()"
+      }
+    }
+  ]
+}

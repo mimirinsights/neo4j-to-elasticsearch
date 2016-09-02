@@ -20,6 +20,7 @@ import org.neo4j.graphdb.*;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
 import java.util.*;
+import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -668,6 +669,44 @@ public class ElasticSearchModuleJsonMappingTest extends ElasticSearchModuleInteg
             }
             tx.success();
         }
+    }
+
+    @Test
+    public void testBulkInsertReplicatesWithJsonMapping() {
+        database = new TestGraphDatabaseFactory().newImpermanentDatabase();
+
+        GraphAwareRuntime runtime = GraphAwareRuntimeFactory.createRuntime(database);
+        runtime.registerModule(new UuidModule("UUID", UuidConfiguration.defaultConfiguration().withUuidProperty("uuid").with(IncludeAllRelationships.getInstance()), database));
+
+        JsonFileMapping mapping = (JsonFileMapping) ServiceLoader.loadMapping("com.graphaware.module.es.mapping.JsonFileMapping");
+        Map<String, String> mappingConfig = new HashMap<>();
+        mappingConfig.put("file", "integration/issue40-mapping.json");
+
+        configuration = ElasticSearchConfiguration.defaultConfiguration()
+                .withMapping(mapping, mappingConfig)
+                .with(IncludeAllRelationships.getInstance())
+                .withUri(HOST)
+                .withPort(PORT);
+
+        runtime.registerModule(new ElasticSearchModule("ES", new ElasticSearchWriter(configuration), configuration));
+
+        runtime.start();
+        runtime.waitUntilStarted();
+        IntStream.range(0, 1000).forEach(i -> {
+            try (Transaction tx = database.beginTx()) {
+                database.execute("UNWIND range(0, 100) AS i CREATE (n:Node {id:i, materialize:true}) CREATE (n2:OtherNode) MERGE (n)-[:RELATES]->(n2)");
+                tx.success();
+            }
+        });
+        TestUtil.waitFor(5000);
+        try (Transaction tx = database.beginTx()) {
+            database.findNodes(Label.label("Node")).stream().limit(100).forEach(n -> {
+                Get get = new Get.Builder("nodes", n.getProperty("uuid").toString()).type("node").build();
+                JestResult result = esClient.execute(get);
+                assertTrue(result.isSucceeded());
+            });
+        }
+
     }
 
     protected void verifyEsReplicationForNodeWithLabels(String label, String index, String type, String keyProperty) {
