@@ -11,7 +11,7 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
+// TODO: NOTE: THIS IS For Reference ONLY
 package com.graphaware.module.es.mapping;
 
 import com.esotericsoftware.kryo.serializers.FieldSerializer;
@@ -27,6 +27,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Result;
+import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.logging.Log;
 
 import java.util.ArrayList;
@@ -98,8 +99,8 @@ public class MimirMapping extends BaseMapping implements Mapping, TransactionAwa
         String id = getKey(node);
 
         // Build node id param list
-        Map<String, Object> params = new HashMap<>();
-        params.put("id", id);
+        Map<String, Object> params = MapUtil.map( "node_id", id);
+//        params.put("node_id", id);
 
         // Plan (write a version of the code that hardcodes everything
         // Plan ii Make everything configurable from file (or at least config) -- might have to modify json
@@ -113,7 +114,8 @@ public class MimirMapping extends BaseMapping implements Mapping, TransactionAwa
         // return the uuid for processing by parent
         // TODO: how would finding parents on multiple types of relationships work? - We probably want to do something else
         // this.getKeyProperty() - index will get the property the key has been indexed with for searching
-        tempNodeMapping.put("Movie", "MATCH (n:Person)-[]-(x:Movie) where x." + this.getKeyProperty() + "  = {id} return n.uuid");
+        tempNodeMapping.put("Movie", String.format("MATCH (n:Person)-[]-(x:Movie) where x." + this.getKeyProperty())
+                + "  = \"%s\" return n.uuid");
 
         // For every label add the identical set of actions
         for (String label : node.getLabels()) {
@@ -128,16 +130,21 @@ public class MimirMapping extends BaseMapping implements Mapping, TransactionAwa
                 actions.add(new Index.Builder(source).index(getIndexFor(Node.class)).type(label).id(id).build());
             } else if (tempNodeMapping.containsKey(label)) {
                 // Get parent id's and iterate through
-
+                LOG.info("Contains key: " + label);
+                // TODO: try catch Query errors
+                String query = String.format(tempNodeMapping.get(label), id);
+                LOG.info("Searching for: " + query);
                 // Tentative plan - use cypher to find parents (easier than writing traversal)
-                Result results = this.database.execute(tempNodeMapping.get(label), params);
+                Result results = this.database.execute(query);
 
-                Iterator<String> parent_ids = results.columnAs("uuid");
+                Iterator<String> parent_ids = results.columnAs("n.uuid");
 
+                LOG.info("Starting id iteration");
                 // Loop through and get parent ids
                 while (parent_ids.hasNext()) {
-                    String ParentUUID = parent_ids.next();
-                    actions.add(new Index.Builder(source).index(getIndexFor(Node.class)).type(label).id(id).type("child").setParameter("parent", ParentUUID).build());
+                    String parentUUID = parent_ids.next();
+                    LOG.info("UUID: " + parentUUID);
+                    actions.add(new Index.Builder(source).index(getIndexFor(Node.class)).type(label).id(id).setParameter("parent", parentUUID).build());
                 }
 
             } else {
@@ -168,9 +175,28 @@ public class MimirMapping extends BaseMapping implements Mapping, TransactionAwa
     }
 
     protected List<BulkableAction<? extends JestResult>> createOrUpdateRelationship(RelationshipExpressions r) {
-        return Collections.singletonList(
-                new Index.Builder(map(r)).index(getIndexFor(Relationship.class)).type(r.getType()).id(getKey(r)).build()
-        );
+//        r.getStartNode() r.getEndNode().getLabels();
+        List<BulkableAction<? extends JestResult>> actions = new ArrayList<>();
+
+        // Custom parent options
+        // TODO: check config - this operation is expensive don't run if we don't have to.
+        // Query the db to get the actual nodes...
+        // ID is not uuid - internal neo4j id
+        Node startNode = this.database.getNodeById(r.getStartNodeGraphId());
+        Node endNode = this.database.getNodeById(r.getEndNodeGraphId());
+
+        NodeExpressions startNodeExpression = new NodeExpressions(startNode);
+        NodeExpressions endNodeExpression = new NodeExpressions(endNode);
+
+        // Add the actions to the queue here
+        actions.addAll(createOrUpdateNode(startNodeExpression));
+        actions.addAll(createOrUpdateNode(endNodeExpression));
+        // End custom parent options
+
+        // Vanilla edge add
+        actions.add(new Index.Builder(map(r)).index(getIndexFor(Relationship.class)).type(r.getType()).id(getKey(r)).build());
+
+        return actions;
     }
 
     @Override

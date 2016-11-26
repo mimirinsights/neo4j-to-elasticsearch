@@ -1,0 +1,34 @@
+{
+  "defaults": {
+    "key_property": "uuid",
+    "nodes_index": "default-index-node",
+    "relationships_index": "default-index-relationship",
+    "include_remaining_properties": true,
+    "blacklisted_node_properties": ["password", "uuid"]
+  },
+  "node_mappings": [
+    {
+      "condition": "hasLabel('Person')",
+      "type": "persons",
+      "properties": {
+        "name": "getProperty('firstName') + ' ' + getProperty('lastName')"
+      }
+    }
+  ],
+  "relationship_mappings": [
+    {
+      "condition": "isType('WORKS_FOR')",
+      "type": "workers"
+    }
+  ],
+  "parent_child_rels": {
+      "test": {
+        "node": {
+          "condition": "hasLabel('Person')",
+          "type": "Followers"
+        },
+        "parent": "Person",
+        "related_by": "-[test]-"
+      }
+  }
+}

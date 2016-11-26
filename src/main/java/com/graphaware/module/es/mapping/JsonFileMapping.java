@@ -70,12 +70,12 @@ public class JsonFileMapping implements Mapping, TransactionAwareMapping {
     }
 
     public List<BulkableAction<? extends JestResult>> updateRelationship(RelationshipExpressions before, RelationshipExpressions after) {
-        return mappingRepresentation.updateRelationshipAndRemoveOldIndices(before, after);
+        return mappingRepresentation.createOrUpdateRelationship(after);
     }
 
     @Override
     public List<BulkableAction<? extends JestResult>> updateNode(NodeExpressions before, NodeExpressions after) {
-        return mappingRepresentation.updateNodeAndRemoveOldIndices(before, after);
+        return mappingRepresentation.createOrUpdateNode(after);
     }
 
     public List<BulkableAction<? extends JestResult>> deleteNode(NodeExpressions node) {
@@ -109,5 +109,6 @@ public class JsonFileMapping implements Mapping, TransactionAwareMapping {
     @Override
     public void setGraphDatabaseService(GraphDatabaseService database) {
         this.database = database;
+        mappingRepresentation.setGraphDatabaseService(database);
     }
 }
