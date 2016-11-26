@@ -22,6 +22,7 @@ import com.graphaware.module.es.mapping.expression.RelationshipExpressions;
 import io.searchbox.action.BulkableAction;
 import io.searchbox.client.JestClient;
 import io.searchbox.client.JestResult;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.logging.Log;
 import org.springframework.core.io.ClassPathResource;
@@ -30,7 +31,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
-public class JsonFileMapping implements Mapping {
+public class JsonFileMapping implements Mapping, TransactionAwareMapping {
 
     private static final Log LOG = LoggerFactory.getLogger(JsonFileMapping.class);
 
@@ -38,6 +39,8 @@ public class JsonFileMapping implements Mapping {
     private static final String FILE_PATH_KEY = "file";
 
     private DocumentMappingRepresentation mappingRepresentation;
+
+    private GraphDatabaseService database;
 
     protected String keyProperty;
 
@@ -67,12 +70,12 @@ public class JsonFileMapping implements Mapping {
     }
 
     public List<BulkableAction<? extends JestResult>> updateRelationship(RelationshipExpressions before, RelationshipExpressions after) {
-        return mappingRepresentation.updateRelationshipAndRemoveOldIndices(before, after);
+        return mappingRepresentation.createOrUpdateRelationship(after);
     }
 
     @Override
     public List<BulkableAction<? extends JestResult>> updateNode(NodeExpressions before, NodeExpressions after) {
-        return mappingRepresentation.updateNodeAndRemoveOldIndices(before, after);
+        return mappingRepresentation.createOrUpdateNode(after);
     }
 
     public List<BulkableAction<? extends JestResult>> deleteNode(NodeExpressions node) {
@@ -101,5 +104,11 @@ public class JsonFileMapping implements Mapping {
     @Override
     public boolean bypassInclusionPolicies() {
         return true;
+    }
+
+    @Override
+    public void setGraphDatabaseService(GraphDatabaseService database) {
+        this.database = database;
+        mappingRepresentation.setGraphDatabaseService(database);
     }
 }

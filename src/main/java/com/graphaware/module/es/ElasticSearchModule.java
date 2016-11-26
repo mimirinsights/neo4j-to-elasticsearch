@@ -22,6 +22,7 @@ import com.graphaware.common.representation.DetachedNode;
 import com.graphaware.common.representation.DetachedRelationship;
 import com.graphaware.module.es.mapping.expression.NodeExpressions;
 import com.graphaware.module.es.mapping.expression.RelationshipExpressions;
+import com.graphaware.module.es.mapping.TransactionAwareMapping;
 import com.graphaware.runtime.config.TxDrivenModuleConfiguration;
 import com.graphaware.runtime.metadata.TxDrivenModuleMetadata;
 import com.graphaware.runtime.module.thirdparty.DefaultThirdPartyIntegrationModule;
@@ -83,6 +84,9 @@ public class ElasticSearchModule extends DefaultThirdPartyIntegrationModule {
     @Override
     public void start(GraphDatabaseService database) {
         super.start(database);
+        if (this.writer.getMapping() instanceof TransactionAwareMapping) {
+            ((TransactionAwareMapping) this.writer.getMapping()).setGraphDatabaseService(database);
+        }
 
         //Must be after start - else the ES connection is not initialised.
         if (reindex) {

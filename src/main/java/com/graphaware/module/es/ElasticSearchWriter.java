@@ -160,4 +160,9 @@ public class ElasticSearchWriter extends BaseThirdPartyWriter {
             }
         }
     }
+
+    public Mapping getMapping()
+    {
+        return mapping;
+    }
 }
